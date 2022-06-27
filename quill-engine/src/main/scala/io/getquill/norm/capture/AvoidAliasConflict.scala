@@ -109,6 +109,13 @@ private[getquill] case class AvoidAliasConflict(state: Set[IdentName], detemp: B
         case GroupBy(Unaliased(q), x, p) =>
           apply(x, p)(GroupBy(q, _, _))
 
+        case GroupTo(Unaliased(q), byId, byBody, toId, toBody) =>
+          val ((byId1, byBody1), s1) = apply(byId, byBody)((_, _))
+          // Normally instead of new AvoidAliasConflict(s1.state, detemp).apply(...) we could just do s1.apply(...)
+          // but because the return type of each one of these is StatefulTransformer[Set[IdentName]] it's problematic
+          val ((toId1, toBody1), s2) = new AvoidAliasConflict(s1.state, detemp).apply(toId, toBody)((_, _))
+          (GroupTo(q, byId1, byBody1, toId1, toBody1), s2)
+
         case DistinctOn(Unaliased(q), x, p) =>
           apply(x, p)(DistinctOn(q, _, _))
 
@@ -126,6 +133,13 @@ private[getquill] case class AvoidAliasConflict(state: Set[IdentName], detemp: B
 
         case m @ GroupBy(CanRealias(), _, _) =>
           recurseAndApply(m)(m => (m.query, m.alias, m.body))(GroupBy(_, _, _))
+
+        case m @ GroupTo(CanRealias(), _, _, _, _) =>
+          // First detalias the groupBy clause, then dealias the mapTo clause using the result of the previous operation
+          // TODO check how this works when duplicate aliases happen compared to Map(GroupBy)
+          val (grp1, s1) = recurseAndApply(m)(m => (m.query, m.byAlias, m.byBody))(GroupTo(_, _, _, m.toAlias, m.toBody))
+          val (grp2, s2) = new AvoidAliasConflict(s1.state, detemp).recurseAndApply(grp1)(grp1 => (m.query, grp1.toAlias, grp1.toBody))(GroupTo(_, grp1.byAlias, grp1.byBody, _, _))
+          (grp2, s2)
 
         case m @ DistinctOn(CanRealias(), _, _) =>
           recurseAndApply(m)(m => (m.query, m.alias, m.body))(DistinctOn(_, _, _))
@@ -169,7 +183,7 @@ private[getquill] case class AvoidAliasConflict(state: Set[IdentName], detemp: B
           super.apply(qq)
       }
 
-  private def apply(x: Ident, p: Ast)(f: (Ident, Ast) => Query): (Query, StatefulTransformer[Set[IdentName]]) =
+  private def apply[Q](x: Ident, p: Ast)(f: (Ident, Ast) => Q): (Q, StatefulTransformer[Set[IdentName]]) =
     trace"Uncapture Apply ($x, $p)" andReturn {
       val fresh = freshIdent(x)
       val pr =

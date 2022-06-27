@@ -60,6 +60,8 @@ object ApplyMap {
     def unapply(ast: Ast): Option[(Ast, Ident, Ast)] =
       ast match {
         case Map(a: GroupBy, b, c)              => None
+        // TODO Need to explore situations where this happens
+        //case Map(a: GroupTo, b, c)              => None
         case Map(a: DistinctOn, b, c)           => None
         case Map(a: FlatJoin, b, c)             => None // FlatJoin should always be surrounded by a Map
         case Map(a, b, InfixedTailOperation(c)) => None
@@ -72,6 +74,8 @@ object ApplyMap {
     q match {
 
       case Map(a: GroupBy, b, c) if (b == c)    => None
+      // TODO Need to explore situations where this happens
+      case Map(a: GroupTo, b, c) if (b == c)    => None
       case Map(a: Nested, b, c) if (b == c)     => None
       case Map(a: FlatJoin, b, c) if (b == c)   => None // FlatJoin should always be surrounded by a Map
       case Nested(DetachableMap(a: Join, b, c)) => None
@@ -116,6 +120,7 @@ object ApplyMap {
         val er = BetaReduction(e, d -> c)
         trace"ApplyMap inside sortBy+distinct for $q" andReturn Some(Distinct(Map(SortBy(a, b, er, f), b, c)))
 
+      // TODO Explore situations where groupTo(...).map happens
       // === Conceptual Example ===
       // Instead of transforming spirit into gin and the bottling the join, bottle the
       // spirit first, then have the spirit transform into gin inside of the bottles.

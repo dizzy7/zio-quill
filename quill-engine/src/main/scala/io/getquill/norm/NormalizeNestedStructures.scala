@@ -13,6 +13,11 @@ object NormalizeNestedStructures {
       case Filter(a, b, c)     => apply(a, c)(Filter(_, b, _))
       case SortBy(a, b, c, d)  => apply(a, c)(SortBy(_, b, _, d))
       case GroupBy(a, b, c)    => apply(a, c)(GroupBy(_, b, _))
+      case GroupTo(a, b, c, d, e)    =>
+        (Normalize(a), Normalize(c), Normalize(e)) match {
+          case (`a`, `c`, `e`) => None
+          case (a, c, e) => Some(GroupTo(a, b, c, d, e))
+        }
       case Aggregation(a, b)   => apply(b)(Aggregation(a, _))
       case Take(a, b)          => apply(a, b)(Take.apply)
       case Drop(a, b)          => apply(a, b)(Drop.apply)

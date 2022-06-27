@@ -80,6 +80,7 @@ trait StatelessTransformer {
       case ConcatMap(a, b, c) => ConcatMap(apply(a), applyIdent(b), apply(c))
       case SortBy(a, b, c, d) => SortBy(apply(a), applyIdent(b), apply(c), d)
       case GroupBy(a, b, c)   => GroupBy(apply(a), applyIdent(b), apply(c))
+      case GroupTo(a, b, c, d, e)   => GroupTo(apply(a), applyIdent(b), apply(c), applyIdent(d), apply(e))
       case Aggregation(o, a)  => Aggregation(o, apply(a))
       case Take(a, b)         => Take(apply(a), apply(b))
       case Drop(a, b)         => Drop(apply(a), apply(b))

@@ -1,6 +1,6 @@
 package io.getquill.norm
 
-import io.getquill.ast.{ Aggregation, Ast, CaseClass, ConcatMap, Distinct, Filter, FlatMap, GroupBy, Ident, Join, Map, Property, Query, StatefulTransformerWithStack, Union, UnionAll }
+import io.getquill.ast.{ Aggregation, Ast, CaseClass, ConcatMap, Distinct, Filter, FlatMap, GroupBy, GroupTo, Ident, Join, Map, Property, Query, StatefulTransformerWithStack, Union, UnionAll }
 import io.getquill.ast.Ast.LeafQuat
 import io.getquill.ast.StatefulTransformerWithStack.History
 import io.getquill.util.Interpolator
@@ -138,6 +138,49 @@ case class SheathLeafClauses(state: Option[String]) extends StatefulTransformerW
           }
         trace"Sheath Agg(query) with $stateInfo in $qq becomes" andReturn {
           (Aggregation(op, ast2), SheathLeafClauses(None))
+        }
+
+
+      case GroupTo(LeafQuat(query), eg, LeafQuat(by), e, LeafQuat(body)) =>
+        val innerState = query match {
+          // If it's an infix inside e.g. Grp(i:Infix,..)(e,by) the higher-level apply should have changed it approporately
+          // by adding an extra Map step inside which has a CaseClass that holds a new attribute that we will pass around
+          // e.g. from GrpTo(leaf,e,e)(e,Agg(e)) should have changed to GrpTo(M(leaf,e,CC(i->e)),e,e.i)(e,Agg(M(e->e.i)))
+          case infix: io.getquill.ast.Infix =>
+            val newId = Ident("i", infix.quat)
+            Some((Map(infix, newId, CaseClass.Single("i" -> newId)), Some("i")))
+          // If it's a query inside e.g. Grp(qry:Query,..)(e,by) the higher-level apply should have changed it approporately
+          // e.g. from GrpTo(ent,e,e.v)(e,Agg(e)) should have changed to GrpTo(ent,e,CC(v->e.v))(e,Agg(M(e->e.v))
+          case _: Query =>
+            val (q, s) = apply(query)
+            Some((q, s.state))
+          // Not sure if this is possible but in this case don't do anything
+          case _ => None
+        }
+        innerState match {
+          case Some((query1, s)) =>
+            val eg1 = Ident(e.name, query1.quat)
+            val by1 = elaborateSheath(by)(s, eg, eg1)
+            // GrpTo signature is GrpTo(query,eg=>by)(e=>body) so both eg and e have the quat of query for example:
+            //   GrpTo(query:Person,eg:Person,by:eg.name)(e:Person=>body)
+            // so when query1 was originally a scalar:
+            //   GrpTo(query:Int,eg:Int,by:eg)(e:Int=>body)
+            // and changes to a value with a column:
+            //   GrpTo(query:Value(i:Int),eg:Value(i:Int),by:eg)(e:Value(i:Int)=>body)
+            // then eg and e also become this new value i.e. Value(i: Int)
+            val e1 = Ident(e.name, query1.quat)
+            val body1 = elaborateGroupSheath(body)(s, e, e1)
+            // Typically this is an aggregation that we apply it to which goes Agg(e._2) to A(M(e._2,x,x.i)) or A(M(e._2,x,x.v))
+            // the state returned from here is almost most cases should be None
+            val (body2, s1) = SheathLeafClauses(None).apply(body1)
+            trace"Sheath GroupTo(Grp,Agg) with $stateInfo in $qq becomes" andReturn {
+              (GroupTo(query1, eg1, by1, e1, body2), s1)
+            }
+          // If we ran into some kind of constructs inside the group-by don't do anything, just return the whole clause as-is
+          case None =>
+            trace"Could not understand Map(Grp,Agg) with $stateInfo clauses in $qq so returning same" andReturn {
+              (qq, SheathLeafClauses(None))
+            }
         }
 
       // This is the entry-point for all groupBy nodes which all must be followed by a .map clause
