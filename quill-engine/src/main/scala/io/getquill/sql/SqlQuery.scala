@@ -227,11 +227,11 @@ object SqlQuery {
         // Given a clause that looks like:
         // people.groupBy(p=>p.name).map{case (name,people) => (name,people.map(_.age).max)}
         // In the AST it's more like:
-        // Map(GroupBy(people,p=>p.name),a:(_1:String,_2:Query[Person]) => p:(a._1,a._2.map(_.age).max)
+        // Map(GroupBy(people,p=>p.name),a:(_1:String,_2:Query[Person]) => p:(a._1,MAX(a._2.map(_.age)))
         // or another way to look at it:
-        // Map(GroupBy(people,p=>p.name),a:(_1:name,_2:people)          => p:(_1,_2.map(_.age).max)
+        // Map(GroupBy(people,p=>p.name),a:(_1:name,_2:people)          => p:(_1,MAX(_2.map(_.age)))
         // more concretely:
-        // Map(GroupBy(q:people,x:p,g:p.name),a:(_1:name,_2:people), p:(_1,_2.map(_.age).max)
+        // Map(GroupBy(q:people,x:p,g:p.name),a:(_1:name,_2:people), p:(_1,MAX(_2.map(_.age)))
         case Map(GroupBy(q, x @ Ident(alias, _), g), a, p) => trace"Flattening| Map(GroupBy)" andReturn {
           val b = base(q, alias)
           //use ExpandSelection logic to break down OrderBy clause
@@ -243,10 +243,10 @@ object SqlQuery {
             if (flatGroupByAsts.length > 1) Tuple(flatGroupByAsts)
             else flatGroupByAsts.head
 
-          // In `p:(a._1,a._2.map(_.age))`
+          // In `p:(a._1,MAX(a._2.map(_.age)))`
           // Reduce a to (p.name, x)
-          // to it becomes: `((p.name, x)._1, (p.name, p)._2.map(_.age))`
-          //             => `(p.name        , p.map(_.age))`
+          // to it becomes: `((p.name, x)._1, MAX((p.name, p)._2.map(_.age)))`
+          //             => `(p.name        , MAX(p.map(_.age)))`
           val select = BetaReduction(p, a -> Tuple(List(g, x)))
           val flattenSelect = FlattenGroupByAggregation(x)(select)
           b.copy(groupBy = Some(groupByClause), select = this.selectValues(flattenSelect))(quat)
@@ -254,6 +254,25 @@ object SqlQuery {
 
         case GroupBy(q, Ident(alias, _), p) => trace"Flattening| GroupBy(Invalid)" andReturn {
           fail("A `groupBy` clause must be followed by `map`.")
+        }
+
+        // Given a clause that looks like:
+        // people.groupTo(p=>p.name)(a => (a.name,a.age.max))
+        // In the AST it's more like:
+        // GroupTo(people,p=>p.name)(a:Person => p:(a.name,MAX(a.age)))
+        // more concretely:
+        // GroupBy(q:people,x:p,g:p.name)(a:Person, p:(a.name,MAX(a.age)))
+        case GroupTo(q, x @ Ident(alias, _), g, a, p) => trace"Flattening| GroupTo" andReturn {
+          val b = base(q, alias)
+          // Same as ExpandSelection in Map(GroupBy)
+          val flatGroupByAsts = new ExpandSelection(b.from).ofSubselect(List(SelectValue(g))).map(_.ast)
+          val groupByClause =
+            if (flatGroupByAsts.length > 1) Tuple(flatGroupByAsts)
+            else flatGroupByAsts.head
+
+          // TODO Should we actually be doing FlattenGroupByAggregation here? Need to test
+          val flattenSelect = FlattenGroupByAggregation(x)(p)
+          b.copy(groupBy = Some(groupByClause), select = this.selectValues(flattenSelect))(quat)
         }
 
         case Map(q, Ident(alias, _), p) =>
