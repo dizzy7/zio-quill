@@ -219,14 +219,34 @@ object SqlQuery {
           )(quat)
         }
 
+        // TODO In the GroupTo case need to verify that columns used in aggregations are actually contained in the grouping
+        //      we can use the list that comes out of flatGroupByAsts for reference for fields being grouped-by
+        //      (e.g. need to keep in mind embedded objects could be in them... so we might have to traverse mutliple levels
+        //      of properties in order to verify)
+
+        // Given a clause that looks like:
+        // people.groupBy(p=>p.name).map{case (name,people) => (name,people.map(_.age).max)}
+        // In the AST it's more like:
+        // Map(GroupBy(people,p=>p.name),a:(_1:String,_2:Query[Person]) => p:(a._1,a._2.map(_.age).max)
+        // or another way to look at it:
+        // Map(GroupBy(people,p=>p.name),a:(_1:name,_2:people)          => p:(_1,_2.map(_.age).max)
+        // more concretely:
+        // Map(GroupBy(q:people,x:p,g:p.name),a:(_1:name,_2:people), p:(_1,_2.map(_.age).max)
         case Map(GroupBy(q, x @ Ident(alias, _), g), a, p) => trace"Flattening| Map(GroupBy)" andReturn {
           val b = base(q, alias)
           //use ExpandSelection logic to break down OrderBy clause
+          //In the case that GroupBy(people,p=>p) make it into: GroupBy(people,p=> List(p.name,p.age) /*return this*/ )
+          //we need that in order to be able to put into the SQL quat clauses are actually being grouped-by
           val flatGroupByAsts = new ExpandSelection(b.from).ofSubselect(List(SelectValue(g))).map(_.ast)
+
           val groupByClause =
             if (flatGroupByAsts.length > 1) Tuple(flatGroupByAsts)
             else flatGroupByAsts.head
 
+          // In `p:(a._1,a._2.map(_.age))`
+          // Reduce a to (p.name, x)
+          // to it becomes: `((p.name, x)._1, (p.name, p)._2.map(_.age))`
+          //             => `(p.name        , p.map(_.age))`
           val select = BetaReduction(p, a -> Tuple(List(g, x)))
           val flattenSelect = FlattenGroupByAggregation(x)(select)
           b.copy(groupBy = Some(groupByClause), select = this.selectValues(flattenSelect))(quat)
