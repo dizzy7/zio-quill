@@ -73,12 +73,12 @@ object ApplyMap {
   def unapply(q: Query): Option[Query] =
     q match {
 
-      case Map(a: GroupBy, b, c) if (b == c)    => None
+      case Map(a: GroupBy, b, c) if (b == c)  => None
       // TODO Need to explore situations where this happens
-      case Map(a: GroupTo, b, c) if (b == c)    => None
-      case Map(a: Nested, b, c) if (b == c)     => None
-      case Map(a: FlatJoin, b, c) if (b == c)   => None // FlatJoin should always be surrounded by a Map
-      case Nested(DetachableMap(a: Join, b, c)) => None
+      case Map(a: GroupTo, b, c) if (b == c)  => None
+      case Map(a: Nested, b, c) if (b == c)   => None
+      case Map(a: FlatJoin, b, c) if (b == c) => None // FlatJoin should always be surrounded by a Map
+      case Nested(DetachableMap(a, b, c))     => None
 
       //  map(i => (i.i, i.l)).distinct.map(x => (x._1, x._2)) =>
       //    map(i => (i.i, i.l)).distinct
