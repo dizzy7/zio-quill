@@ -252,6 +252,10 @@ object SqlQuery {
           b.copy(groupBy = Some(groupByClause), select = this.selectValues(flattenSelect))(quat)
         }
 
+        case agg @ Aggregation(_, _) => trace"Flattening| Aggregation(Invalid)" andReturn {
+          fail(s"Found the aggregation `${agg}` in an invalid place. An SQL aggregation (e.g. min/max/etc...) cannot be used in the body of an SQL statement e.g. in the WHERE clause.")
+        }
+
         case GroupBy(q, Ident(alias, _), p) => trace"Flattening| GroupBy(Invalid)" andReturn {
           fail("A `groupBy` clause must be followed by `map`.")
         }
