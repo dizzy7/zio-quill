@@ -77,10 +77,10 @@ object RepropagateQuats extends StatelessTransformer {
       case Filter(a, b, c) => applyBody(a, b, c)(Filter)
       case Map(a, b, c) =>
         applyBody(a, b, c)(Map)
-      case FlatMap(a, b, c)    => applyBody(a, b, c)(FlatMap)
-      case ConcatMap(a, b, c)  => applyBody(a, b, c)(ConcatMap)
-      case GroupBy(a, b, c)    => applyBody(a, b, c)(GroupBy)
-      case GroupTo(a, iA1, c, iA2, e)    =>
+      case FlatMap(a, b, c)   => applyBody(a, b, c)(FlatMap)
+      case ConcatMap(a, b, c) => applyBody(a, b, c)(ConcatMap)
+      case GroupBy(a, b, c)   => applyBody(a, b, c)(GroupBy)
+      case GroupTo(a, iA1, c, iA2, e) =>
         val ar = apply(a)
         val iA1r = iA1.retypeQuatFrom(ar.quat)
         val iA2r = iA2.retypeQuatFrom(ar.quat)

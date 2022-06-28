@@ -140,7 +140,6 @@ case class SheathLeafClauses(state: Option[String]) extends StatefulTransformerW
           (Aggregation(op, ast2), SheathLeafClauses(None))
         }
 
-
       case GroupTo(LeafQuat(query), eg, LeafQuat(by), e, LeafQuat(body)) =>
         val innerState = query match {
           // If it's an infix inside e.g. Grp(i:Infix,..)(e,by) the higher-level apply should have changed it approporately

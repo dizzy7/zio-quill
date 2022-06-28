@@ -224,6 +224,17 @@ trait Parsing extends ValueComputation with QuatMaking {
 
     case q"$source.groupBy[$t](($alias) => $body)" if (is[DslQuery[Any]](source)) =>
       GroupBy(astParser(source), identParser(alias), astParser(body))
+    case q"$source.groupTo[$t, $t1](($byAlias) => $byBody)(($toAlias) => $toBody)" if (is[DslQuery[Any]](source)) =>
+      GroupTo(astParser(source), identParser(byAlias), astParser(byBody), identParser(toAlias), astParser(toBody))
+
+    case q"$pack.min[$t]($a)" =>
+      Aggregation(AggregationOperator.`min`, astParser(a))
+    case q"$pack.max[$t]($a)" =>
+      Aggregation(AggregationOperator.`max`, astParser(a))
+    case q"$pack.avg[$t]($a)($imp)" =>
+      Aggregation(AggregationOperator.`avg`, astParser(a))
+    case q"$pack.sum[$t]($a)($imp)" =>
+      Aggregation(AggregationOperator.`sum`, astParser(a))
 
     case q"$a.value[$t]" if (is[DslQuery[Any]](a))   => astParser(a)
     case q"$a.min[$t]" if (is[DslQuery[Any]](a))     => Aggregation(AggregationOperator.`min`, astParser(a))

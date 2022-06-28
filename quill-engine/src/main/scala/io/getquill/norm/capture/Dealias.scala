@@ -32,6 +32,10 @@ case class Dealias(state: Option[Ident]) extends StatefulTransformer[Option[Iden
         dealias(a, b, c)(SortBy(_, _, _, d))
       case GroupBy(a, b, c) =>
         dealias(a, b, c)(GroupBy)
+      case GroupTo(a, b, c, d, e) =>
+        val (g1, s1) = dealias(a, b, c)(GroupTo(_, _, _, d, e))
+        val (g2, s2) = new Dealias(s1.state).dealias(a, d, e)(GroupTo(_, g1.byAlias, g1.byBody, _, _))
+        (g2, s2)
       case DistinctOn(a, b, c) =>
         dealias(a, b, c)(DistinctOn)
       case Take(a, b) =>

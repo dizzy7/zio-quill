@@ -175,7 +175,7 @@ object SqlQuery {
         FlattenSqlQuery(from = sources :+ ctx, select = select(alias, q.quat))(q.quat)
       }
       q match {
-        case _: GroupTo => trace"base| Nesting GroupTo $q" andReturn nest(source(q, alias))
+        case _: GroupTo            => trace"base| Nesting GroupTo $q" andReturn nest(source(q, alias))
         case Map(_: GroupBy, _, _) => trace"base| Nesting Map(GroupBy) $q" andReturn nest(source(q, alias))
         case Nested(q)             => trace"base| Nesting Nested $q" andReturn nest(QueryContext(apply(q), alias))
         case q: ConcatMap          => trace"base| Nesting ConcatMap $q" andReturn nest(QueryContext(apply(q), alias))

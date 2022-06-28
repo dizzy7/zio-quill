@@ -6,17 +6,17 @@ object NormalizeNestedStructures {
 
   def unapply(q: Query): Option[Query] =
     q match {
-      case e: Entity           => None
-      case Map(a, b, c)        => apply(a, c)(Map(_, b, _))
-      case FlatMap(a, b, c)    => apply(a, c)(FlatMap(_, b, _))
-      case ConcatMap(a, b, c)  => apply(a, c)(ConcatMap(_, b, _))
-      case Filter(a, b, c)     => apply(a, c)(Filter(_, b, _))
-      case SortBy(a, b, c, d)  => apply(a, c)(SortBy(_, b, _, d))
-      case GroupBy(a, b, c)    => apply(a, c)(GroupBy(_, b, _))
-      case GroupTo(a, b, c, d, e)    =>
+      case e: Entity          => None
+      case Map(a, b, c)       => apply(a, c)(Map(_, b, _))
+      case FlatMap(a, b, c)   => apply(a, c)(FlatMap(_, b, _))
+      case ConcatMap(a, b, c) => apply(a, c)(ConcatMap(_, b, _))
+      case Filter(a, b, c)    => apply(a, c)(Filter(_, b, _))
+      case SortBy(a, b, c, d) => apply(a, c)(SortBy(_, b, _, d))
+      case GroupBy(a, b, c)   => apply(a, c)(GroupBy(_, b, _))
+      case GroupTo(a, b, c, d, e) =>
         (Normalize(a), Normalize(c), Normalize(e)) match {
           case (`a`, `c`, `e`) => None
-          case (a, c, e) => Some(GroupTo(a, b, c, d, e))
+          case (a, c, e)       => Some(GroupTo(a, b, c, d, e))
         }
       case Aggregation(a, b)   => apply(b)(Aggregation(a, _))
       case Take(a, b)          => apply(a, b)(Take.apply)
