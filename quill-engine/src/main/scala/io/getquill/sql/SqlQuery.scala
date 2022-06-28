@@ -270,9 +270,15 @@ object SqlQuery {
             if (flatGroupByAsts.length > 1) Tuple(flatGroupByAsts)
             else flatGroupByAsts.head
 
-          // TODO Should we actually be doing FlattenGroupByAggregation here? Need to test
-          val flattenSelect = FlattenGroupByAggregation(x)(p)
-          b.copy(groupBy = Some(groupByClause), select = this.selectValues(flattenSelect))(quat)
+          // We need to change the `a` var in:
+          //   people.groupTo(p=>p.name)(a => (a.name,a.age.max))
+          // to same alias as 1st clause:
+          //   p => (p.name,p.age.max)
+          // since these become select-clauses:
+          //   SelectValue(p.name,p.age.max)
+          // since the `p` variable is in the `from` part of the query
+          val realiasedSelect = BetaReduction(p, a -> x)
+          b.copy(groupBy = Some(groupByClause), select = this.selectValues(realiasedSelect))(quat)
         }
 
         case Map(q, Ident(alias, _), p) =>

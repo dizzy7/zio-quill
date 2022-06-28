@@ -37,7 +37,6 @@ case class Dealias(state: Option[Ident]) extends StatefulTransformer[Option[Iden
         val (GroupTo(qry1, b1, c1, _, _), s1) = dealias(qry, b, c)(GroupTo(_, _, _, d, e))
         // Then use the result of that to dealias the toIdent/toBody (d and e)
         val (g2, s2) = new Dealias(s1.state).dealias(qry1, d, e)(GroupTo(_, b1, c1, _, _))
-        println(s"=============== Dealias result: ${g2}")
         (g2, s2)
       case DistinctOn(a, b, c) =>
         dealias(a, b, c)(DistinctOn)

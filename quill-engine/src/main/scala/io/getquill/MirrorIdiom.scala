@@ -103,7 +103,7 @@ trait MirrorIdiomBase extends Idiom {
       stmt"${source.token}.groupBy(${alias.token} => ${body.token})"
 
     case GroupTo(source, byAlias, byBody, toAlias, toBody) =>
-      stmt"${source.token}.groupBy(${byAlias.token} => ${byBody.token})(${toAlias.token} => ${toBody.token})"
+      stmt"${source.token}.groupTo(${byAlias.token} => ${byBody.token})(${toAlias.token} => ${toBody.token})"
 
     case Aggregation(op, ast) =>
       stmt"${scopedTokenizer(ast)}.${op.token}"
