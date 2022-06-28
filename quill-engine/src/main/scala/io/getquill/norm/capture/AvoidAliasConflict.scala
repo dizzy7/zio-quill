@@ -138,7 +138,7 @@ private[getquill] case class AvoidAliasConflict(state: Set[IdentName], detemp: B
           // First detalias the groupBy clause, then dealias the mapTo clause using the result of the previous operation
           // TODO check how this works when duplicate aliases happen compared to Map(GroupBy)
           val (grp1, s1) = recurseAndApply(m)(m => (m.query, m.byAlias, m.byBody))(GroupTo(_, _, _, m.toAlias, m.toBody))
-          val (grp2, s2) = new AvoidAliasConflict(s1.state, detemp).recurseAndApply(grp1)(grp1 => (m.query, grp1.toAlias, grp1.toBody))(GroupTo(_, grp1.byAlias, grp1.byBody, _, _))
+          val (grp2, s2) = new AvoidAliasConflict(s1.state, detemp).recurseAndApply(grp1)(grp1 => (grp1.query, grp1.toAlias, grp1.toBody))(GroupTo(_, grp1.byAlias, grp1.byBody, _, _))
           (grp2, s2)
 
         case m @ DistinctOn(CanRealias(), _, _) =>
