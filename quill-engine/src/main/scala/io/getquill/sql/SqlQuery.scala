@@ -252,10 +252,6 @@ object SqlQuery {
           b.copy(groupBy = Some(groupByClause), select = this.selectValues(flattenSelect))(quat)
         }
 
-        case agg @ Aggregation(_, _) => trace"Flattening| Aggregation(Invalid)" andReturn {
-          fail(s"Found the aggregation `${agg}` in an invalid place. An SQL aggregation (e.g. min/max/etc...) cannot be used in the body of an SQL statement e.g. in the WHERE clause.")
-        }
-
         case GroupBy(q, Ident(alias, _), p) => trace"Flattening| GroupBy(Invalid)" andReturn {
           fail("A `groupBy` clause must be followed by `map`.")
         }
@@ -329,6 +325,10 @@ object SqlQuery {
                 select = select(alias, quat)
               )(quat)
 
+        // TODO Finish describing
+        // Happens when you either have an aggrgation in the middle of a query
+        // ...
+        // Or as the result of a map
         case Aggregation(op, q: Query) =>
           val b = flatten(q, alias)
           b.select match {
@@ -342,6 +342,10 @@ object SqlQuery {
                   select = List(SelectValue(Aggregation(op, Ident("*", quat)))) // Quat of a * aggregation is same as for the entire query
                 )(quat)
           }
+
+        case agg @ Aggregation(_, _) => trace"Flattening| Aggregation(Invalid)" andReturn {
+          fail(s"Found the aggregation `${agg}` in an invalid place. An SQL aggregation (e.g. min/max/etc...) cannot be used in the body of an SQL statement e.g. in the WHERE clause.")
+        }
 
         case Take(q, n) =>
           val b = base(q, alias)
