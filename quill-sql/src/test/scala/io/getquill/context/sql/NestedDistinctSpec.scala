@@ -203,6 +203,13 @@ class NestedDistinctSpec extends Spec {
         ctx.run(q).string mustEqual "SELECT p.embtheName AS _1, p.embid AS _2 FROM (SELECT x.id AS embid, x.theName AS embtheName FROM Parent x) AS p"
       }
 
+      "can be propagated across query with naming intact - embedded and column" in {
+        val q = quote {
+          query[Parent].map(p => (p.idP, p.emb)).nested.map(e => (e._1, e._2))
+        }
+        ctx.run(q).string mustEqual "SELECT e._1, e._2id AS id, e._2theName AS theName FROM (SELECT p.idP AS _1, p.id AS _2id, p.theName AS _2theName FROM Parent p) AS e"
+      }
+
       "can be propogated across query with naming intact and then used further" in {
         val q = quote {
           query[Parent].map(p => p.emb).distinct.map(e => (e.name, e.id)).distinct.map(tup => (tup._1, tup._2)).distinct
